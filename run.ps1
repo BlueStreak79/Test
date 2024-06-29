@@ -28,13 +28,13 @@ function Download-File {
             Log-Message "Attempting to download $url to $output (Attempt $($attempt + 1))"
             Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing -ErrorAction Stop
             Log-Message "Download successful: $url"
-            return
+            return $true
         } catch {
             $errorMessage = $_.Exception.Message
-            Show-ErrorPopup "Failed to download and execute $($url):`n$($errorMessage)"
+            Log-Message "Failed to download $url: $errorMessage"
             $attempt++
             if ($attempt -eq $retries) {
-                throw "Failed to download $url after $retries attempts."
+                return $false
             }
             Start-Sleep -Seconds 5
         }
@@ -62,15 +62,6 @@ function Log-Message {
     Write-Output $message
 }
 
-# Function to display error in a popup
-function Show-ErrorPopup {
-    param (
-        [string]$message
-    )
-    Add-Type -AssemblyName PresentationFramework
-    [System.Windows.MessageBox]::Show($message, "Error", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
-}
-
 # Main script
 Ensure-Admin
 Ensure-ExecutionPolicy
@@ -84,10 +75,16 @@ $script2Path = Join-Path -Path $tempDir -ChildPath "oem.ps1"
 $logFile = Join-Path -Path $tempDir -ChildPath "script_log.txt"
 
 # Download files
-Download-File -url "https://github.com/BlueStreak79/Test/raw/main/Cam-Audio.ps1" -output $script1Path
-Download-File -url "https://github.com/BlueStreak79/Test/raw/main/AquaKeyTest.exe" -output $exe1Path
-Download-File -url "https://github.com/BlueStreak79/Test/raw/main/BatteryInfoView.exe" -output $exe2Path
-Download-File -url "https://github.com/BlueStreak79/Test/raw/main/oem.ps1" -output $script2Path
+$downloadSuccess = $true
+$downloadSuccess = $downloadSuccess -and (Download-File -url "https://github.com/BlueStreak79/Test/raw/main/Cam-Audio.ps1" -output $script1Path)
+$downloadSuccess = $downloadSuccess -and (Download-File -url "https://github.com/BlueStreak79/Test/raw/main/AquaKeyTest.exe" -output $exe1Path)
+$downloadSuccess = $downloadSuccess -and (Download-File -url "https://github.com/BlueStreak79/Test/raw/main/BatteryInfoView.exe" -output $exe2Path)
+$downloadSuccess = $downloadSuccess -and (Download-File -url "https://github.com/BlueStreak79/Test/raw/main/oem.ps1" -output $script2Path)
+
+if (-not $downloadSuccess) {
+    Log-Message "One or more files failed to download. Check script log for details."
+    Exit 1
+}
 
 # Execute scripts and executables
 Log-Message "Executing scripts and executables..."
