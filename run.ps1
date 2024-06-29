@@ -32,7 +32,6 @@ function Download-File {
             Start-Sleep -Seconds 5
         }
     }
-    Write-Error "Failed to download $url after $retries attempts."
     return $false
 }
 
@@ -60,6 +59,7 @@ function DownloadAndExecute {
     # Download file
     $downloaded = Download-File -url $url -output $output
     if (-not $downloaded) {
+        Write-Warning "Failed to download $url to $output."
         return
     }
     
@@ -67,7 +67,7 @@ function DownloadAndExecute {
     try {
         Start-Process $output -Wait -NoNewWindow
     } catch {
-        Write-Error "Failed to execute $output: $_"
+        Write-Warning "Failed to execute $output: $_"
     }
 }
 
