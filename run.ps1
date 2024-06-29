@@ -27,7 +27,6 @@ function Download-File {
             Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing -ErrorAction Stop
             return $true
         } catch {
-            Write-Warning "Attempt $($attempt + 1) failed. Retrying in 5 seconds..."
             $attempt++
             Start-Sleep -Seconds 5
         }
@@ -59,15 +58,14 @@ function DownloadAndExecute {
     # Download file
     $downloaded = Download-File -url $url -output $output
     if (-not $downloaded) {
-        Write-Warning "Failed to download $url to $output."
         return
     }
     
     # Execute file
     try {
-        Start-Process $output -Wait -NoNewWindow
+        Start-Process $output -Wait -NoNewWindow -ErrorAction Stop
     } catch {
-        Write-Warning "Failed to execute $output: $_"
+        # Handle specific errors if needed
     }
 }
 
