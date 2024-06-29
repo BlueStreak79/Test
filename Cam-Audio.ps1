@@ -69,10 +69,12 @@ Request-Elevation
 
 # Parameters handling
 if ($args -contains "-Camera") {
+    Write-Output "Testing Camera..."
     Test-Camera
 }
 
 if ($args -contains "-Sound") {
+    Write-Output "Testing Sound..."
     Start-Sleep -Seconds 5  # Wait for 5 seconds before opening sound settings
     Test-Sound
 }
