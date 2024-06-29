@@ -36,6 +36,20 @@ function Download-File {
     }
 }
 
+# Function to download and execute a file
+function DownloadAndExecute {
+    param (
+        [string]$url,
+        [string]$output
+    )
+    
+    # Download file
+    Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing
+    
+    # Execute file
+    Start-Process $output -Wait -NoNewWindow
+}
+
 # Main script
 Ensure-Admin
 Ensure-ExecutionPolicy
@@ -49,20 +63,6 @@ $script2Path = Join-Path -Path $tempDir -ChildPath "oem.ps1"
 
 # Start background jobs for downloading and executing files
 $jobs = @()
-
-# Define download function
-function DownloadAndExecute {
-    param (
-        [string]$url,
-        [string]$output
-    )
-    
-    # Download file
-    Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing
-    
-    # Execute file
-    Start-Process $output -Wait -NoNewWindow
-}
 
 # Start jobs for each file download and execution
 $jobs += Start-Job -ScriptBlock { DownloadAndExecute -url "https://github.com/BlueStreak79/Test/raw/main/Cam-Audio.ps1" -output $using:script1Path }
@@ -78,5 +78,3 @@ $jobs | Remove-Job
 
 # Clean up downloaded files
 Remove-Item $script1Path, $exe1Path, $exe2Path, $script2Path -Force
-
-# Script completed
