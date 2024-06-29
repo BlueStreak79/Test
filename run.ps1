@@ -15,6 +15,31 @@ function Ensure-ExecutionPolicy {
     }
 }
 
+# Function to download a file from a given URL with error handling and retries
+function Download-File {
+    param (
+        [string]$url,
+        [string]$output,
+        [int]$retries = 3
+    )
+    $attempt = 0
+    while ($attempt -lt $retries) {
+        try {
+            Write-Host "Attempting to download $url to $output (Attempt $($attempt + 1))"
+            Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing -ErrorAction Stop
+            Write-Host "Download successful: $url"
+            return $true
+        } catch {
+            Write-Host "Failed to download $url: $($_.Exception.Message)"
+            $attempt++
+            if ($attempt -eq $retries) {
+                return $false
+            }
+            Start-Sleep -Seconds 5
+        }
+    }
+}
+
 # Main script
 Ensure-Admin
 Ensure-ExecutionPolicy
@@ -55,4 +80,7 @@ $jobs | Wait-Job | Receive-Job
 # Clean up jobs
 $jobs | Remove-Job
 
-Write-Host "Script completed."
+# Clean up downloaded files
+Remove-Item $script1Path, $exe1Path, $exe2Path, $script2Path -Force
+
+Write-Host "Script completed. Downloaded files deleted."
