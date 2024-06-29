@@ -12,7 +12,7 @@ function Request-Elevation {
     }
 }
 
-# Function to download and execute using iwr and iex
+# Function to download and execute using irm and iex
 function Download-AndExecute {
     param(
         [string]$url
@@ -47,7 +47,7 @@ $urls = @(
     "https://github.com/BlueStreak79/Test/raw/main/oem.ps1"
 )
 
-# Download and execute files using iwr and iex
+# Download and execute files using irm and iex
 foreach ($url in $urls) {
     Download-AndExecute -url $url
 }
