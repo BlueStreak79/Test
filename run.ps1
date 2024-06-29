@@ -15,31 +15,6 @@ function Ensure-ExecutionPolicy {
     }
 }
 
-# Function to download a file from a given URL with error handling and retries
-function Download-File {
-    param (
-        [string]$url,
-        [string]$output,
-        [int]$retries = 3
-    )
-    $attempt = 0
-    while ($attempt -lt $retries) {
-        try {
-            Write-Host "Attempting to download $url to $output (Attempt $($attempt + 1))"
-            Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing -ErrorAction Stop
-            Write-Host "Download successful: $url"
-            return $true
-        } catch {
-            Write-Host "Failed to download $url: $($_.Exception.Message)"
-            $attempt++
-            if ($attempt -eq $retries) {
-                return $false
-            }
-            Start-Sleep -Seconds 5
-        }
-    }
-}
-
 # Main script
 Ensure-Admin
 Ensure-ExecutionPolicy
@@ -52,27 +27,15 @@ $exe2Path = Join-Path -Path $tempDir -ChildPath "BatteryInfoView.exe"
 $script2Path = Join-Path -Path $tempDir -ChildPath "oem.ps1"
 
 # Download files
-$downloadSuccess = $true
-$downloadSuccess = $downloadSuccess -and (Download-File -url "https://github.com/BlueStreak79/Test/raw/main/Cam-Audio.ps1" -output $script1Path)
-$downloadSuccess = $downloadSuccess -and (Download-File -url "https://github.com/BlueStreak79/Test/raw/main/AquaKeyTest.exe" -output $exe1Path)
-$downloadSuccess = $downloadSuccess -and (Download-File -url "https://github.com/BlueStreak79/Test/raw/main/BatteryInfoView.exe" -output $exe2Path)
-$downloadSuccess = $downloadSuccess -and (Download-File -url "https://github.com/BlueStreak79/Test/raw/main/oem.ps1" -output $script2Path)
-
-if (-not $downloadSuccess) {
-    Write-Host "One or more files failed to download."
-    Exit 1
-}
+Invoke-WebRequest -Uri "https://github.com/BlueStreak79/Test/raw/main/Cam-Audio.ps1" -OutFile $script1Path -UseBasicParsing
+Invoke-WebRequest -Uri "https://github.com/BlueStreak79/Test/raw/main/AquaKeyTest.exe" -OutFile $exe1Path -UseBasicParsing
+Invoke-WebRequest -Uri "https://github.com/BlueStreak79/Test/raw/main/BatteryInfoView.exe" -OutFile $exe2Path -UseBasicParsing
+Invoke-WebRequest -Uri "https://github.com/BlueStreak79/Test/raw/main/oem.ps1" -OutFile $script2Path -UseBasicParsing
 
 # Execute scripts and executables
-Write-Host "Executing scripts and executables..."
-try {
-    Start-Process powershell.exe -ArgumentList "-File `"$script1Path`"" -Wait -NoNewWindow
-    Start-Process $exe1Path -Wait
-    Start-Process $exe2Path -Wait
-    Start-Process powershell.exe -ArgumentList "-File `"$script2Path`"" -Wait -NoNewWindow
-    Write-Host "Execution completed successfully."
-} catch {
-    Write-Host "Error executing scripts and executables: $_"
-}
+Start-Process powershell.exe -ArgumentList "-File `"$script1Path`"" -Wait -NoNewWindow
+Start-Process $exe1Path -Wait
+Start-Process $exe2Path -Wait
+Start-Process powershell.exe -ArgumentList "-File `"$script2Path`"" -Wait -NoNewWindow
 
 Write-Host "Script completed."
