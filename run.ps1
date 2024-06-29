@@ -60,12 +60,9 @@ $outputFiles = @(
     "oem.ps1"
 )
 
-# Download and execute files simultaneously
+# Download and execute files
 for ($i = 0; $i -lt $urls.Length; $i++) {
-    Start-Job -ScriptBlock {
-        param($url, $outputFile)
-        Download-AndExecute -url $url -outputFile $outputFile
-    } -ArgumentList $urls[$i], $outputFiles[$i]
+    Download-AndExecute -url $urls[$i] -outputFile $outputFiles[$i]
 }
 
 Write-Output "Files download and execution initiated. Check task manager or respective applications for status."
