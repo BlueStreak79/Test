@@ -1,7 +1,7 @@
 # Function to check if running as admin
 function Ensure-Admin {
     if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-        Log-Message "Restarting script with administrative privileges..."
+        Write-Host "Restarting script with administrative privileges..."
         Start-Process powershell.exe "-File $PSCommandPath" -Verb RunAs
         Exit
     }
@@ -25,13 +25,12 @@ function Download-File {
     $attempt = 0
     while ($attempt -lt $retries) {
         try {
-            Log-Message "Attempting to download $url to $output (Attempt $($attempt + 1))"
+            Write-Host "Attempting to download $url to $output (Attempt $($attempt + 1))"
             Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing -ErrorAction Stop
-            Log-Message "Download successful: $url"
+            Write-Host "Download successful: $url"
             return $true
         } catch {
-            $errorMessage = $_.Exception.Message
-            Log-Message "Failed to download $url: $errorMessage"
+            Write-Host "Failed to download $url: $($_.Exception.Message)"
             $attempt++
             if ($attempt -eq $retries) {
                 return $false
@@ -39,27 +38,6 @@ function Download-File {
             Start-Sleep -Seconds 5
         }
     }
-}
-
-# Function to replace a file in a specified directory
-function Replace-File {
-    param (
-        [string]$source,
-        [string]$destination
-    )
-    Log-Message "Replacing file in $destination with $source"
-    Copy-Item -Path $source -Destination $destination -Force
-}
-
-# Logging function
-function Log-Message {
-    param (
-        [string]$message
-    )
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logEntry = "$timestamp - $message"
-    Add-Content -Path $logFile -Value $logEntry
-    Write-Output $message
 }
 
 # Main script
@@ -72,7 +50,6 @@ $script1Path = Join-Path -Path $tempDir -ChildPath "Cam-Audio.ps1"
 $exe1Path = Join-Path -Path $tempDir -ChildPath "AquaKeyTest.exe"
 $exe2Path = Join-Path -Path $tempDir -ChildPath "BatteryInfoView.exe"
 $script2Path = Join-Path -Path $tempDir -ChildPath "oem.ps1"
-$logFile = Join-Path -Path $tempDir -ChildPath "script_log.txt"
 
 # Download files
 $downloadSuccess = $true
@@ -82,21 +59,20 @@ $downloadSuccess = $downloadSuccess -and (Download-File -url "https://github.com
 $downloadSuccess = $downloadSuccess -and (Download-File -url "https://github.com/BlueStreak79/Test/raw/main/oem.ps1" -output $script2Path)
 
 if (-not $downloadSuccess) {
-    Log-Message "One or more files failed to download. Check script log for details."
+    Write-Host "One or more files failed to download."
     Exit 1
 }
 
 # Execute scripts and executables
-Log-Message "Executing scripts and executables..."
+Write-Host "Executing scripts and executables..."
 try {
     Start-Process powershell.exe -ArgumentList "-File `"$script1Path`"" -Wait -NoNewWindow
     Start-Process $exe1Path -Wait
     Start-Process $exe2Path -Wait
     Start-Process powershell.exe -ArgumentList "-File `"$script2Path`"" -Wait -NoNewWindow
-    Log-Message "Execution completed successfully."
+    Write-Host "Execution completed successfully."
 } catch {
-    Log-Message "Error executing scripts and executables: $_"
+    Write-Host "Error executing scripts and executables: $_"
 }
 
-# Display log location
-Log-Message "Script completed. View log at: $logFile"
+Write-Host "Script completed."
