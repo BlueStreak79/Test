@@ -30,7 +30,8 @@ function Download-File {
             Log-Message "Download successful: $url"
             return
         } catch {
-            Log-Message "Error downloading $url: $_"
+            $errorMessage = $_.Exception.Message
+            Show-ErrorPopup "Failed to download and execute $($url):`n$($errorMessage)"
             $attempt++
             if ($attempt -eq $retries) {
                 throw "Failed to download $url after $retries attempts."
@@ -59,6 +60,15 @@ function Log-Message {
     $logEntry = "$timestamp - $message"
     Add-Content -Path $logFile -Value $logEntry
     Write-Output $message
+}
+
+# Function to display error in a popup
+function Show-ErrorPopup {
+    param (
+        [string]$message
+    )
+    Add-Type -AssemblyName PresentationFramework
+    [System.Windows.MessageBox]::Show($message, "Error", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
 }
 
 # Main script
