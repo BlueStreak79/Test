@@ -36,10 +36,20 @@ function Test-Camera {
 function Test-Sound {
     try {
         Write-Output "Opening Sound settings for testing..."
-        Start-Process -FilePath "ms-settings:sound"
+        if (Test-WindowsVersion -ge "10.0.22000") {
+            Start-Process -FilePath "ms-settings:sound"
+        } else {
+            Start-Process -FilePath "control.exe" -ArgumentList "/name Microsoft.Sound"
+        }
     } catch {
         Write-Error "Failed to open Sound settings. Please ensure your Windows settings are accessible."
     }
+}
+
+# Function to check Windows version
+function Test-WindowsVersion {
+    $winVer = [System.Environment]::OSVersion.Version
+    return "$($winVer.Major).$($winVer.Minor).$($winVer.Build)"
 }
 
 # Function to log events
