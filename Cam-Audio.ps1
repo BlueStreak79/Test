@@ -12,87 +12,60 @@ function Request-Elevation {
     }
 }
 
-# Function to check if Camera app exists
-function Test-CameraAppExists {
-    $cameraApp = Get-AppxPackage -Name Microsoft.WindowsCamera
-    return $cameraApp -ne $null
-}
-
-# Function to open camera
-function Test-Camera {
-    if (Test-CameraAppExists) {
-        try {
-            Write-Output "Opening Camera for testing..."
-            Start-Process -FilePath "microsoft.windows.camera:"
-        } catch {
-            Write-Error "Failed to open Camera app. Please ensure the Camera app is installed and accessible."
-        }
-    } else {
-        Write-Error "Camera app is not installed or not available on this system."
-    }
-}
-
-# Function to open sound settings
-function Test-Sound {
-    try {
-        Write-Output "Opening Sound settings for testing..."
-        if (Test-WindowsVersion -ge "10.0.22000") {
-            Start-Process -FilePath "ms-settings:sound"
-        } else {
-            Start-Process -FilePath "control.exe" -ArgumentList "/name Microsoft.Sound"
-        }
-    } catch {
-        Write-Error "Failed to open Sound settings. Please ensure your Windows settings are accessible."
-    }
-}
-
-# Function to check Windows version
-function Test-WindowsVersion {
-    $winVer = [System.Environment]::OSVersion.Version
-    return "$($winVer.Major).$($winVer.Minor).$($winVer.Build)"
-}
-
-# Function to log events
-function Log-Event {
+# Function to set execution policy temporarily
+function Set-ExecutionPolicyTemp {
     param(
-        [string]$message,
-        [string]$logFile
+        [string]$policy
     )
+    try {
+        Set-ExecutionPolicy $policy -Scope Process -Force -ErrorAction Stop
+    } catch {
+        Write-Error "Failed to set execution policy. Script will continue with current policy."
+    }
+}
 
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logEntry = "$timestamp - $message"
-    Add-content -Path $logFile -Value $logEntry
+# Function to open Camera app
+function Open-Camera {
+    try {
+        Write-Output "Opening Camera app..."
+        Start-Process -FilePath "microsoft.windows.camera:" -ErrorAction Stop
+    } catch {
+        $errorMessage = $_.Exception.Message
+        Show-ErrorPopup "Failed to open Camera app:`n$errorMessage"
+    }
+}
+
+# Function to open Sound settings
+function Open-SoundSettings {
+    try {
+        Write-Output "Opening Sound settings..."
+        Start-Process -FilePath "control.exe" -ArgumentList "/name Microsoft.Sound" -ErrorAction Stop
+    } catch {
+        $errorMessage = $_.Exception.Message
+        Show-ErrorPopup "Failed to open Sound settings:`n$errorMessage"
+    }
+}
+
+# Function to show error popup
+function Show-ErrorPopup {
+    param(
+        [string]$message
+    )
+    Add-Type -AssemblyName PresentationFramework
+    [System.Windows.MessageBox]::Show($message, "Error", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
 }
 
 # Main script execution
 Request-Elevation
 
-# Parameters handling
-if ($args -contains "-Camera") {
-    Write-Output "Testing Camera..."
-    Test-Camera
-}
+# Set execution policy temporarily
+Set-ExecutionPolicyTemp -policy RemoteSigned
 
-if ($args -contains "-Sound") {
-    Write-Output "Testing Sound..."
-    Start-Sleep -Seconds 5  # Wait for 5 seconds before opening sound settings
-    Test-Sound
-}
+# Open Camera app
+Open-Camera
 
-# Interactive mode
-$interactive = $true
-if ($args -contains "-NonInteractive") {
-    $interactive = $false
-}
+# Open Sound settings
+Open-SoundSettings
 
-if ($interactive) {
-    Write-Output "Camera and Sound testing initiated. Please follow the on-screen instructions."
-
-    # Logging events
-    $logFile = "C:\Logs\CameraSoundTest.log"
-    if (-not (Test-Path $logFile)) {
-        New-Item -ItemType File -Path $logFile -Force | Out-Null
-    }
-    
-    Log-Event -message "Camera and Sound test initiated." -logFile $logFile
-}
+# Reset execution policy to Restricted (optional)
+# Set-ExecutionPolicy Restricted -Scope Process -Force
