@@ -26,16 +26,33 @@ $exe1Path = Join-Path -Path $tempDir -ChildPath "AquaKeyTest.exe"
 $exe2Path = Join-Path -Path $tempDir -ChildPath "BatteryInfoView.exe"
 $script2Path = Join-Path -Path $tempDir -ChildPath "oem.ps1"
 
-# Download files
-Invoke-WebRequest -Uri "https://github.com/BlueStreak79/Test/raw/main/Cam-Audio.ps1" -OutFile $script1Path -UseBasicParsing
-Invoke-WebRequest -Uri "https://github.com/BlueStreak79/Test/raw/main/AquaKeyTest.exe" -OutFile $exe1Path -UseBasicParsing
-Invoke-WebRequest -Uri "https://github.com/BlueStreak79/Test/raw/main/BatteryInfoView.exe" -OutFile $exe2Path -UseBasicParsing
-Invoke-WebRequest -Uri "https://github.com/BlueStreak79/Test/raw/main/oem.ps1" -OutFile $script2Path -UseBasicParsing
+# Start background jobs for downloading and executing files
+$jobs = @()
 
-# Execute scripts and executables
-Start-Process powershell.exe -ArgumentList "-File `"$script1Path`"" -Wait -NoNewWindow
-Start-Process $exe1Path -Wait
-Start-Process $exe2Path -Wait
-Start-Process powershell.exe -ArgumentList "-File `"$script2Path`"" -Wait -NoNewWindow
+# Define download functions
+function DownloadAndExecute {
+    param (
+        [string]$url,
+        [string]$output
+    )
+    
+    # Download file
+    Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing
+    
+    # Execute file
+    Start-Process $output -Wait -NoNewWindow
+}
+
+# Start jobs for each file download and execution
+$jobs += Start-Job -ScriptBlock { DownloadAndExecute -url "https://github.com/BlueStreak79/Test/raw/main/Cam-Audio.ps1" -output $using:script1Path }
+$jobs += Start-Job -ScriptBlock { DownloadAndExecute -url "https://github.com/BlueStreak79/Test/raw/main/AquaKeyTest.exe" -output $using:exe1Path }
+$jobs += Start-Job -ScriptBlock { DownloadAndExecute -url "https://github.com/BlueStreak79/Test/raw/main/BatteryInfoView.exe" -output $using:exe2Path }
+$jobs += Start-Job -ScriptBlock { DownloadAndExecute -url "https://github.com/BlueStreak79/Test/raw/main/oem.ps1" -output $using:script2Path }
+
+# Wait for all jobs to complete
+$jobs | Wait-Job | Receive-Job
+
+# Clean up jobs
+$jobs | Remove-Job
 
 Write-Host "Script completed."
