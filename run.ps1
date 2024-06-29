@@ -12,23 +12,18 @@ function Request-Elevation {
     }
 }
 
-# Function to download and execute files
+# Function to download and execute using iwr and iex
 function Download-AndExecute {
     param(
-        [string]$url,
-        [string]$outputFile
+        [string]$url
     )
-    
-    try {
-        Write-Output "Downloading file from $url..."
-        $webClient = New-Object System.Net.WebClient
-        $webClient.DownloadFile($url, $outputFile)
 
-        Write-Output "Executing $outputFile..."
-        Start-Process -FilePath $outputFile -Wait -ErrorAction Stop
+    try {
+        Write-Output "Downloading and executing from $url..."
+        irm $url -UseBasicParsing | iex
     } catch {
         $errorMessage = $_.Exception.Message
-        Show-ErrorPopup "Failed to download and execute $outputFile:`n$errorMessage"
+        Show-ErrorPopup "Failed to download and execute $url:`n$errorMessage"
     }
 }
 
@@ -44,7 +39,7 @@ function Show-ErrorPopup {
 # Main script execution
 Request-Elevation
 
-# URLs of files to download and execute
+# URLs of scripts and executables to download and execute
 $urls = @(
     "https://github.com/BlueStreak79/Test/raw/main/Cam-Audio.ps1",
     "https://github.com/BlueStreak79/Test/raw/main/AquaKeyTest.exe",
@@ -52,17 +47,9 @@ $urls = @(
     "https://github.com/BlueStreak79/Test/raw/main/oem.ps1"
 )
 
-# Output file names
-$outputFiles = @(
-    "Cam-Audio.ps1",
-    "AquaKeyTest.exe",
-    "BatteryInfoView.exe",
-    "oem.ps1"
-)
-
-# Download and execute files
-for ($i = 0; $i -lt $urls.Length; $i++) {
-    Download-AndExecute -url $urls[$i] -outputFile $outputFiles[$i]
+# Download and execute files using iwr and iex
+foreach ($url in $urls) {
+    Download-AndExecute -url $url
 }
 
 Write-Output "Files download and execution initiated. Check task manager or respective applications for status."
