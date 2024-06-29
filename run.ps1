@@ -27,27 +27,13 @@ function Download-File {
             Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing -ErrorAction Stop
             return $true
         } catch {
+            Write-Warning "Attempt $($attempt + 1) failed. Retrying in 5 seconds..."
             $attempt++
-            if ($attempt -eq $retries) {
-                return $false
-            }
             Start-Sleep -Seconds 5
         }
     }
-}
-
-# Function to download and execute a file
-function DownloadAndExecute {
-    param (
-        [string]$url,
-        [string]$output
-    )
-    
-    # Download file
-    Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing
-    
-    # Execute file
-    Start-Process $output -Wait -NoNewWindow
+    Write-Error "Failed to download $url after $retries attempts."
+    return $false
 }
 
 # Main script
@@ -64,11 +50,32 @@ $script2Path = Join-Path -Path $tempDir -ChildPath "oem.ps1"
 # Start background jobs for downloading and executing files
 $jobs = @()
 
+# Function to download and execute a file
+function DownloadAndExecute {
+    param (
+        [string]$url,
+        [string]$output
+    )
+    
+    # Download file
+    $downloaded = Download-File -url $url -output $output
+    if (-not $downloaded) {
+        return
+    }
+    
+    # Execute file
+    try {
+        Start-Process $output -Wait -NoNewWindow
+    } catch {
+        Write-Error "Failed to execute $output: $_"
+    }
+}
+
 # Start jobs for each file download and execution
-$jobs += Start-Job -ScriptBlock { DownloadAndExecute -url "https://github.com/BlueStreak79/Test/raw/main/Cam-Audio.ps1" -output $using:script1Path }
-$jobs += Start-Job -ScriptBlock { DownloadAndExecute -url "https://github.com/BlueStreak79/Test/raw/main/AquaKeyTest.exe" -output $using:exe1Path }
-$jobs += Start-Job -ScriptBlock { DownloadAndExecute -url "https://github.com/BlueStreak79/Test/raw/main/BatteryInfoView.exe" -output $using:exe2Path }
-$jobs += Start-Job -ScriptBlock { DownloadAndExecute -url "https://github.com/BlueStreak79/Test/raw/main/oem.ps1" -output $using:script2Path }
+$jobs += Start-Job -ScriptBlock { param($url, $output) DownloadAndExecute -url $url -output $output } -ArgumentList "https://github.com/BlueStreak79/Test/raw/main/Cam-Audio.ps1", $script1Path
+$jobs += Start-Job -ScriptBlock { param($url, $output) DownloadAndExecute -url $url -output $output } -ArgumentList "https://github.com/BlueStreak79/Test/raw/main/AquaKeyTest.exe", $exe1Path
+$jobs += Start-Job -ScriptBlock { param($url, $output) DownloadAndExecute -url $url -output $output } -ArgumentList "https://github.com/BlueStreak79/Test/raw/main/BatteryInfoView.exe", $exe2Path
+$jobs += Start-Job -ScriptBlock { param($url, $output) DownloadAndExecute -url $url -output $output } -ArgumentList "https://github.com/BlueStreak79/Test/raw/main/oem.ps1", $script2Path
 
 # Wait for all jobs to complete
 $jobs | Wait-Job | Receive-Job
@@ -77,4 +84,9 @@ $jobs | Wait-Job | Receive-Job
 $jobs | Remove-Job
 
 # Clean up downloaded files
-Remove-Item $script1Path, $exe1Path, $exe2Path, $script2Path -Force
+$filesToDelete = @($script1Path, $exe1Path, $exe2Path, $script2Path)
+$filesToDelete | ForEach-Object {
+    if (Test-Path $_) {
+        Remove-Item $_ -Force
+    }
+}
