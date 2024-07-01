@@ -28,32 +28,6 @@ function Download-File {
     }
 }
 
-# Function to download and execute a file
-function DownloadAndExecute {
-    param (
-        [string]$url,
-        [string]$output
-    )
-    
-    if (Download-File -url $url -output $output) {
-        if ($output -like "*.ps1") {
-            try {
-                . $output
-            } catch {
-                Write-Error "Failed to execute script $output. Error: $_"
-            }
-        } elseif ($output -like "*.exe") {
-            try {
-                Start-Process $output -NoNewWindow -ErrorAction Stop
-            } catch {
-                Write-Error "Failed to execute executable $output. Error: $_"
-            }
-        }
-    } else {
-        Write-Error "Failed to download file from $url"
-    }
-}
-
 # Main script
 Ensure-Admin
 Ensure-ExecutionPolicy
@@ -71,7 +45,48 @@ $files = @{
 $jobs = @()
 foreach ($url in $files.Keys) {
     $output = $files[$url]
-    $jobs += Start-Job -ScriptBlock { param($url, $output) DownloadAndExecute -url $url -output $output } -ArgumentList $url, $output
+    $jobs += Start-Job -ScriptBlock {
+        param($url, $output)
+        function Download-File {
+            param (
+                [string]$url,
+                [string]$output
+            )
+            try {
+                Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing -ErrorAction Stop
+                return $true
+            } catch {
+                return $false
+            }
+        }
+        
+        function DownloadAndExecute {
+            param (
+                [string]$url,
+                [string]$output
+            )
+            
+            if (Download-File -url $url -output $output) {
+                if ($output -like "*.ps1") {
+                    try {
+                        . $output
+                    } catch {
+                        Write-Error "Failed to execute script $output. Error: $_"
+                    }
+                } elseif ($output -like "*.exe") {
+                    try {
+                        Start-Process $output -NoNewWindow -ErrorAction Stop
+                    } catch {
+                        Write-Error "Failed to execute executable $output. Error: $_"
+                    }
+                }
+            } else {
+                Write-Error "Failed to download file from $url"
+            }
+        }
+
+        DownloadAndExecute -url $url -output $output
+    } -ArgumentList $url, $output
 }
 
 # Wait for all jobs to complete
